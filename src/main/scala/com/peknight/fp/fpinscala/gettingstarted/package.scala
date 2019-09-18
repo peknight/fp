@@ -2,7 +2,7 @@ package com.peknight.fp.fpinscala
 
 import scala.annotation.tailrec
 
-package object ch2 {
+package object gettingstarted {
   def formatAbs(x: Int) = {
     val msg = "The absolute value of %d is %d."
     msg.format(x, com.peknight.fp.math.Math.abs(x))
