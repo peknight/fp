@@ -8,8 +8,8 @@
 
 ### The implicitly Method
 
-The Scala standard library provides a generic type class interface called `implicitly`. We can use `implicitly` to 
-summon any value from implicit scope: 
+The Scala standard library provides a generic type class interface called `implicitly`. We can use `implicitly` to
+summon any value from implicit scope:
 
 ```scala
 def implicitly[A](implicit value: A): A = value
@@ -31,10 +31,9 @@ trait Show[A] {
 object Show {
   // Convert a function to a `Show` instance:
   def show[A](f: A => String): Show[A] = ???
-  
+
   // Create a `Show` instance from a `toString` method
   def fromToString[A]: Show[A] = ???
-  
 }
 ```
 
@@ -58,7 +57,7 @@ trait Eq[A] {
 }
 ```
 
-The interface syntax, defined in `cats.syntax.eq`, provides two methods for performing equality checks provided there is 
+The interface syntax, defined in `cats.syntax.eq`, provides two methods for performing equality checks provided there is
 an instance Eq[A] in scope:
 
 * `===` compares two objects for equality;
@@ -69,7 +68,7 @@ import cats.Eq
 import cats.syntax.eq._ // for === =!=
 ```
 
-We can define our own instances of `Eq` using the `Eq.instance[A]` method, which accepts a function of type 
+We can define our own instances of `Eq` using the `Eq.instance[A]` method, which accepts a function of type
 `(A, A) => Boolean` and returns an `Eq[A]`.
 
 ### Option
@@ -110,14 +109,14 @@ trait Monoid[A] {
 
 > *Monoid Laws*
 >
-> Monoids must formally obey several *laws*. For all values `x`, `y`, and `z`, 
+> Monoids must formally obey several *laws*. For all values `x`, `y`, and `z`,
 > in `A`, `combine` must be associative and `empty` must be an identity element:
-> 
+>
 > ```
 > def associativeLaw[A](x: A, y: A, z: A)(implicit m: Monoid[A]): Boolean = {
 >   m.combine(x, m.combine(y, z)) == m.combine(m.combine(x, y), z)
 > }
-> 
+>
 > def identityLaw[A](x: A)(implicit m: Monoid[A]): Boolean = {
 >   (m.combine(x, m.empty) == x) && (m.combine(m.emtpy, x) == x)
 > }
@@ -179,7 +178,7 @@ trait Functor[F[_]] {
 
 We obtain instances using the standard `Functor.apply` method on the companion object.
 
-`Functor` provides the `lift` method, which converts a function of type `A => B` to one that operates over a functor and 
+`Functor` provides the `lift` method, which converts a function of type `A => B` to one that operates over a functor and
 has type `F[A] => F[B]`:
 
 ```scala
@@ -191,7 +190,7 @@ import cats.syntax.functor._ // for map
 
 [`cats.Contravariant`](http://typelevel.org/cats/api/cats/Contravariant.html)
 
-The *contravariant functor* provides an operation called `contramap` that 
+The *contravariant functor* provides an operation called `contramap` that
 represents "prepending" and operation to a chain.
 
 ```scala
@@ -211,8 +210,8 @@ import cats.syntax.contravariant._ // for contramap
 
 [`cats.Invariant`](https://typelevel.org/cats/api/cats/Invariant.html)
 
-*Invariant functors* implement a method called `imap` that is informally equivalent to a combination of `map` and 
-`contramap`. If `map` generates new type class instances by appending a function to a chain, and `contramap` generates 
+*Invariant functors* implement a method called `imap` that is informally equivalent to a combination of `map` and
+`contramap`. If `map` generates new type class instances by appending a function to a chain, and `contramap` generates
 them by prepending an operation to a chain, `imap` generates them via a pair of bidirectional transformations.
 
 ```scala
@@ -241,7 +240,7 @@ implicit val symbolMonoid: Monoid[Symbol] = Monoid[String].imap(Symbol.apply)(_.
 
 [`cats.Monad`](https://typelevel.org/cats/api/cats/Monad.html)
 
-Informally, a monad is anything with a constructor and a `flatMap` method. 
+Informally, a monad is anything with a constructor and a `flatMap` method.
 
 > A monad is a mechanism for sequencing computations.
 
@@ -250,7 +249,7 @@ Here is a simplified version of the `Monad` type class in Cats:
 ```scala
 trait Monad[F[_]] {
   def pure[A](value: A): F[A]
-  
+
   def flatMap[A, B](value: F[A])(func: A => F[B]): F[B]
 }
 ```
@@ -264,7 +263,7 @@ trait Monad[F[_]] {
 > ```
 > m.flatMap(pure) == m
 > ```
-> *Associativity*: `flatMapping` over two functions `f` and `g` is the same as `flatMapping` over `f` and then 
+> *Associativity*: `flatMapping` over two functions `f` and `g` is the same as `flatMapping` over `f` and then
 `flatMapping` over `g`:
 > ```
 > m.flatMap(f).flatMap(g) == m.flatMap(x => f(x).flatMap(g))
@@ -276,7 +275,7 @@ Every monad is also a functor:
 def map[A, B](value: F[A])(func: A => B): F[B] = flatMap(value)(a => pure(func(a)))
 ```
 
-`Monad` extends two other type classes: `FlatMap`, which provides the `flatMap` method, and `Applicative`, which 
+`Monad` extends two other type classes: `FlatMap`, which provides the `flatMap` method, and `Applicative`, which
 provides `pure`. `Applicative` also extends `Functor`.
 
 ```scala
@@ -285,6 +284,37 @@ import cats.syntax.flatMap._ // for flatMap
 import cats.syntax.functor._ // for map
 import cats.syntax.applicative._ // for pure
 ```
+
+We can define a `Monad` for a custom type by providing implementations of three methods: `flatMap`, `pure` and a method
+we haven't seen yet called `tailRecM`. Here is an implementation of `Monad` for `Option` as an example:
+
+```scala
+import cats.Monad
+import scala.annotation.tailrec
+
+val optionMonad = new Monad[Option] {
+  def flatMap[A, B](opt: Option[A])(fn: A => Option[B]): Option[B] = opt flatMap fn
+
+  def pure[A](opt: A): Option[A] = Option(opt)
+
+  @tailrec
+  def tailRecM[A, B](a: A)(fn: A => Option[Either[A, B]]): Option[B] = fn(a) match {
+    case None => None
+    case Some(Left(a1)) => tailRecM(a1)(fn)
+    case Some(Right(b)) => Some(b)
+  }
+}
+```
+
+The `tailRecM` method is an optimisation used in Cats to limit the amount of stack space consumed by nested calls to
+`flatMap`. The method should recursively call itself until the result of `fn` returns a `Right`.
+
+If we can make `tailRecM` tail-recursive, Cats is able to guarantee stack safety in recursive situations such as folding
+over large lists.
+
+In some libraries and languages, notably Scalaz and Haskell, `pure` is referred to as `point` or `return` and `flatMap`
+is referred to as `bind` or `>>=`. This si purely a difference in terminology.
+
 
 ### Id
 
@@ -304,7 +334,7 @@ Cats provides instances of various type classes for `Id`, including `Functor` an
 import cats.syntax.either._ // for asLeft asRight
 ```
 
-`cats.syntax.either` adds some useful extension methods to the `Either` companion object. The `catchOnly` and 
+`cats.syntax.either` adds some useful extension methods to the `Either` companion object. The `catchOnly` and
 `catchNonFatal` methods are great for capturing `Exceptions` as instances of `Either`:
 
 ```
@@ -358,18 +388,18 @@ Finally, Cats adds a host of conversion methods: `toOption`, `toList`, `toTry`, 
 
 [`cats.MonadError`](https://typelevel.org/cats/api/cats/MonadError.html)
 
-Cats provides an additional type class called `MonadError` that abstracts over `Either`-like data types that are used 
-for error handling. `MonadError` provides extra operations for raising and handling errors. 
+Cats provides an additional type class called `MonadError` that abstracts over `Either`-like data types that are used
+for error handling. `MonadError` provides extra operations for raising and handling errors.
 
 Here is a simplified version of the definition of `MonadError`:
 ```
 trait MonadError[F[_], E] extends Monad[F] {
   // Lift an error into the `F` context:
   def raiseError[A](e: E): F[A]
-  
+
   // Handle an error, potentially recovering from it:
   def handleError[A](fa: F[A])(f: E => A): F[A]
-  
+
   // Test an instance of `F`,
   // failing if the predicate is not satisfied:
   def ensure[A](fa: F[A])(e: E)(f: A => Boolean): F[A]
@@ -385,7 +415,7 @@ In reality, `MonadError` extends another type class called `ApplicativeError`.
 
 Here's an example where we instantiate the type class for `Either`:
 
-```scala
+```
 import cats.MonadError
 import cats.instances.either._ // for MonadError
 
@@ -400,7 +430,7 @@ import cats.syntax.applicativeError._ // for raiseError handleError
 import cats.syntax.monadError._ // for ensure
 ```
 
-Cats provides instances of `MonadError` for numerous data types including `Either`, `Future`, and `Try`. The instance 
+Cats provides instances of `MonadError` for numerous data types including `Either`, `Future`, and `Try`. The instance
 for `Either` is customisable to any error type, whereas the instances for `Future` and `Try` always represent errors as
 `Throwables`.
 
@@ -409,7 +439,7 @@ for `Either` is customisable to any error type, whereas the instances for `Futur
 [`cats.Eval`](https://typelevel.org/cats/api/cats/Eval.html)
 
 `cats.Eval` is a monad that allows us to abstract over different models of evaluation.
-`Eval` has three subtypes: `Now`, `Later`, and `Always`. 
+`Eval` has three subtypes: `Now`, `Later`, and `Always`.
 
 We can extract the result of an `Eval` using its `value` method:
 ```scala
@@ -431,21 +461,21 @@ The three behaviours are summarized below:
 | `lazy val` | `Later` | lazy, memoized |
 | `def` | `Always` | lazy, not memoized |
 
-`Eval's` `map` and `flatMap` methods add computations to a chain. In this case, however, the chain is stored explicitly 
+`Eval's` `map` and `flatMap` methods add computations to a chain. In this case, however, the chain is stored explicitly
 as a list of functions. The functions are't run util we call `Eval's` `value` method to request a result.
 
-While the semantics of the originating `Eval` instances are maintained, mapping functions are always called lazily on 
+While the semantics of the originating `Eval` instances are maintained, mapping functions are always called lazily on
 demand (`def` semantics).
 
-`Eval` has a `memoize` method that allows us to memoize a chain of computations. 
+`Eval` has a `memoize` method that allows us to memoize a chain of computations.
 
-`Eval.defer` takes an existing instance of `Eval` and defers its evaluation. The `defer` method is trampolined like 
+`Eval.defer` takes an existing instance of `Eval` and defers its evaluation. The `defer` method is trampolined like
 `map` and `flatMap`:
 
 ```scala
 import cats.Eval
 
-def factorial(n: BigInt): Eval[BigInt] = 
+def factorial(n: BigInt): Eval[BigInt] =
     if (n == 1) {
       Eval.now(n)
     } else {
@@ -453,7 +483,491 @@ def factorial(n: BigInt): Eval[BigInt] =
     }
 ```
 
+### Writer
+
+[`cats.data.Writer`](https://typelevel.org/cats/api/cats/data/package$$Writer$.html)
+
+`cats.data.Writer` is a monad that lets us carry a log along with a computation.
+
+A `Writer[W, A]` carries two values: a *log* of type `W` and a *result* of type `A`. We can create a `Writer` from
+values of each type as follows:
+
+```scala
+import cats.data.Writer
+import cats.instances.vector._ // for Monoid
+
+Writer(Vector("It was the best of times", "it was the worst of times"), 1859)
+```
+Cats implements `Writer` in terms of another type, `WriterT` (a monad transformer). We can read types like
+`WriterT[Id, W, A]` as `Writer[W, A]`:
+
+```
+type Writer[W, A] = WriterT[Id, W, A]
+```
+Cats provides a way of creating `Writers` specifying only the log or the result. If we only have a result we can use the
+standard `pure` syntax. To do this we must have a `Monoid[W]` in scope so Cats knows how to produce an empty log:
+
+```
+import cats.instances.vector._ // for Monoid
+import cats.syntax.applicative._ // for pure
+
+type Logged[A] = Writer[Vector[String], A]
+
+123.pure[Logged]
+```
+
+If we have a log and no result we can create a `Writer[Unit]` using the `tell` syntax from `cats.syntax.writer`:
+
+```scala
+import cats.syntax.writer._ // for tell
+
+Vector("msg1", "msg2", "msg3").tell
+```
+
+If we have both a result and a log, we can either use `Writer.apply` or we can use the `writer` syntax from
+`cats.syntax.writer`:
+
+```
+import cats.syntax.writer._ // for writer
+
+val a = Writer(Vector("msg1", "msg2", "msg3"), 123)
+
+val b = 123.writer(Vector("msg1", "msg2", "msg3"))
+```
+
+We can extract the result and log from a `Writer` using the `value` and `written` methods respectively:
+
+```
+val aResult: Int = a.value
+val aLog: Vector[String] = a.written
+```
+
+We can extract both values at the same time using the `run` method:
+
+```
+val (log, result) = b.run
+```
+
+The log in a `Writer` is preserved when we `map` of `flatMap` over it.
+`flatMap` appends the logs from the source `Writer` and the result of the user's sequencing function. For this reason
+it's good practice to use a log type that has an efficient append and concatenate operations, such as a Vector:
+
+```
+val writer1 = for {
+  a <- 10.pure[Logged]
+  _ <- Vector("a", "b", "c").tell
+  b <- 32.writer(Vector("x", "y", "z"))
+} yield a + b
+```
+We can transform the log in a `Writer` with the `mapWritten` method:
+
+```
+val writer2 = writer1.mapWritten(_.map(_.toUpperCase))
+```
+
+We can transform both log and result simultaneously using `bimap` or `mapBoth`. `bimap` takes two function parameters,
+one for the log and one for the result. `mapBoth` takes a single function that accepts two parameters:
+
+```
+val writer3 = writer1.bimap(log => log.map(_.toUpperCase), res => res * 100) // WriterT[Id, Vector[String], Int]
+
+val writer4 = writer1.mapBoth { (log, res) =>
+  val log2 = log.map(_ + "!")
+  val res2 = res * 1000
+  (log2, res2)
+} // cats.Id[(Vector[String], Int)]
+```
+
+Finally, we can clear the log with the `reset` method and swap log and result with the `swap` method:
+
+### Reader
+
+[`cats.data.Reader`](https://typelevel.org/cats/api/cats/data/package$$Reader$.html)
+
+`cats.data.Reader` is a monad that allows us to sequence operations that depend on some input. Instances of `Reader`
+wrap up functions of one argument, providing us with useful methods for composing them.
+
+`Reader` is implemented in terms of another type called `Kleisli`.
+
+We can create a `Reader[A, B]` from a function `A => B` using the `Reader.apply` constructor, and we can extract the
+function again using the `Reader's` `run` method and call it using `apply` as usual:
+
+```scala
+import cats.data.Reader
+
+case class Cat(name: String, favoriteFood: String)
+// defined class Cat
+
+val catName: Reader[Cat, String] = Reader(cat => cat.name)
+
+catName.run(Cat("Garfield", "lasagne"))
+```
+
+`Readers` are most useful in situations where:
+
+* we are constructing a batch program that can easily be represented by a function;
+* we need to defer injection of a known parameter or set of parameters;
+* we want to be able to test parts of the program in isolation.
+
+### State
+
+[`cats.data.State`](https://typelevel.org/cats/api/cats/data/package$$State$.html)
+
+`cats.data.State` allows us to pass additional state around as part of a computation.
+
+Instances of `State[S, A]` represent functions of type `S => (S, A)`. `S` is the type of the state and `A` is the type
+of the result.
+
+```scala
+import cats.data.State
+
+val a = State[Int, String] { state => (state, s"The state is $state") }
+```
+
+An instance of `State` is a function that does two things:
+
+* transforms an input state to an output state;
+* computes a result.
+
+`State` provides three methods--`run`, `runS`, and `runA`--that return different combinations of state and result. Each
+method returns an instance of `Eval`, which `State` uses to maintain stack safety. We call the `value` method as usual
+to extract the actual result:
+
+Cats provides several convenience constructors for creating primitive steps:
+
+* `get` extracts the state as the result;
+* `set` updates the state and returns unit as the result;
+* `pure` ignores the state and returns a supplied result;
+* `inspect` extracts the state via a transformation function;
+* `modify` updates the state using an update function.
+
+### Monad Transformers
+
+Cats defines transformers for a variety of monads, each providing the extra knowledage we need to compose that monad
+with others, each named with a `T` suffix:
+
+* `cats.data.OptionT` for `Option`;
+* `cats.data.EitherT` for `Either`;
+* `cats.data.ReaderT` for `Reader`;
+* `cats.data.WriterT` for `Writer`;
+* `cats.data.StateT` for `State`;
+* `cats.data.IdT` for `Id`.
+
+Here's an example that uses `OptionT` to compose `List` and `Option`:
+
+```scala
+import cats.data.OptionT
+
+type ListOption[A] = OptionT[List, A]
+
+import cats.Monad
+import cats.instances.list._ // for Monad
+import cats.syntax.applicative._ // for pure
+
+val result1: ListOption[Int] = OptionT(List(Option(10)))
+val result2: ListOption[Int] = 32.pure[ListOption]
+
+result1.flatMap { (x: Int) =>
+  result2.map { (y: Int) =>
+    x + y
+  }
+} // OptionT(List(Some(42))
+
+```
+
+Each monad transformer is a data type, defined in `cats.data`, that allows us to wrap stacks of monads to produce new
+monads.
+
+In fact, many monads in Cats are defined by combining a monad transformer with the `Id` monad.
+
+```
+type Reader[E, A] = ReaderT[Id, E, A] // = Kleisli[Id, E, A]
+type Writer[W, A] = WriterT[Id, W, A]
+type State[S, A] = StateT[Id, S, A]
+```
+
+We can create transformed monad stacks using the relevant monad transformer's `apply` method or the usual `pure` syntax.
+
+```
+val errorStack1 = OptionT[ErrorOr, Int](Right(Some(10)))
+
+val errorStack2 = 32.pure[ErrorOrOption]
+```
+
+We can unpack it using its `value` method. This returns the untransformed stack. We can then manipulate the individual
+monads in the usual way:
+
+```
+errorStack1.value // ErrorOr[Option[Int]]
+
+errorStack2.value.map(_.getOrElse(-1)) // Either[String, Int]
+```
+
+Each call to `value` unpacks a *single* monad transformer. We may need more than one call to completely unpack a large
+stack.
+
+### [Kleisli](https://typelevel.org/cats/datatypes/kleisli.html)
+
+[`cats.data.Kleisli`](https://typelevel.org/cats/api/cats/data/Kleisli.html)
+
+At its core, `Kleisli[F[_], A, B]` is just a wrapper around the function `A => F[B]`. Depending on the properties of the
+`F[_]`, we can do different things with `Kleisli`s . For instance, if `F[_]` has a `FlatMap[F]` instance (we can call
+`flatMap` on `F[A]` values), we can compose two `Kleisli`s much like we can two functions.
+
+Below are some more methods on `Kleisli` that can be used so long as the constraint on `F[_]` is satisfied.
+
+| Method | Constraint on `F[_]` |
+| :--- | :--- |
+| andThen | FlatMap |
+| compose | FlatMap |
+| flatMap | FlatMap |
+| lower | Monad |
+| map | Functor |
+| traverse | Applicative |
+
+### Semigroupal
+
+[`cats.Semigroupal`](https://typelevel.org/cats/api/cats/Semigroupal.html)
+
+`cats.Semigroupal` is a type class that allows us to combine contexts. Cats provides a `cats.syntax.apply` module that
+makes use of `Semigroupal` and `Functor` to allow users to sequence functions with multiple arguments.
+
+```scala
+trait Semigroupal[F[_]] {
+  def product[A, B](fa: F[A], fb: F[B]): F[(A, B)]
+}
+```
+
+The parameters `fa` and `fb` are independent of one another. This is contrast to `flatMap`, which imposes a strict order
+on its parameters.
+
+The companion object for `Semigroupal` defines a set of methods on top of `product`. For example, the methods `tuple2`
+through `tuple22` generalise `product` to different arities.
+
+The methods `map2` through `map22` apply a user-specified function to the values inside 2 to 22 contexts.
+
+There are also methods `contramap2` through `contramap22` and `imap2` through `imap22`, that require instances of
+`Contravariant` and `Invariant` respectively.
+
+```scala
+import cats.syntax.apply._ // for tupled and mapN
+```
+
+We can use the same trick on tuples of up to 22 values. Cats defines a separate `tupled` method for each arity:
+
+```
+(Option(123), Option("abc"), Option(true)).tupled
+```
+
+Cats' apply syntax provides a method called `mapN` that accepts an implicit `Functor` and a function of the correct
+arity to combine the values:
+
+```
+case class Cat(name: String, born: Int, color: String)
+
+(
+  Option("Garfield"),
+  Option(1978),
+  Option("orange & black")
+).mapN(Cat.apply) // Option[Cat]
+```
+
+Apply syntax also has `contramapN` and `imapN` methods that accept `Contravariant` and `Invariant` functors. For
+example, we can combine `Monoids` using `Invariant`. Here's an example:
+```scala
+import cats.Monoid
+import cats.instances.int._ // for Monoid
+import cats.instances.invariant._ // for Semigroupal
+import cats.instances.list._ // for Monoid
+import cats.instances.string._ // for Monoid
+import cats.syntax.apply._ // for imapN
+
+case class Cat(name: String, yearOfBirth: Int, favoriteFoods: List[String])
+
+val tupleToCat: (String, Int, List[String]) => Cat = Cat.apply _
+
+val catToTuple: Cat => (String, Int, List[String]) = cat => (cat.name, cat.yearOfBirth, cat.favoriteFoods)
+
+implicit val catMonoid: Monoid[Cat] = (
+  Monoid[String],
+  Monoid[Int],
+  Monoid[List[String]]
+).imapN(tupleToCat)(catToTuple) // wtf ...
+
+```
+
+### Applicative
+
+`Applicative` extends `Semigroupal` and `Functor`. It provides a way of applying functions to parameters within a
+context. `Applicative` is the source of the `pure` method.
+
+### Validated
+
+Cat's provides a data type called `Validated` that has an instance of `Semigroupal` but no instance of `Monad`. The
+implementation of `product` is therefore free to accumulate errors:
+
+```scala
+import cats.Semigroupal
+import cats.data.Validated
+import cats.instances.list._ // for Monoid
+
+type AllErrorsOr[A] = Validated[List[String], A]
+
+Semigroupal[AllErrorsOr].product(
+  Validated.invalid(List("Error 1")),
+  Validated.invalid(List("Error 2"))
+) // AllErrorsOr[(Nothing, Nothing)] = Invalid(List(Error 1, Error 2))
+```
+
+`Validated` has two subtypes, `Validated.Valid` and `Validated.Invalid`, that correspond loosely to `Right` and `Left`.
+There are a lot of ways to create instances of these types. We can create them directly using their apply methods:
+
+```
+val v = Validated.Valid(123)
+val i = Validated.Invalid(List("Badness"))
+```
+
+However, it is often easier to use the `valid` and `invalid` smart constructors, which widen the return type to
+`Validated`:
+
+```
+val v = Validated.valid[List[String], Int](123)
+val i = Validated.invalid[List[String], Int](List("Badness"))
+```
+
+As a third option we can import the `valid` and `invalid` extension methods from `cats.syntax.validated`:
+
+```scala
+import cats.syntax.validated._
+
+123.valid[List[String]]
+List("Badness").invalid[Int]
+```
+
+As a fourth option we can use `pure` and `raiseError` from `cats.syntax.applicative` and `cats.syntax.applicativeError`
+respectively:
+
+```
+import cats.syntax.applicative._ // for pure
+import cats.syntax.applicativeError._ // for raiseError
+
+type ErrorsOr[A] = Validated[List[String], A]
+
+123.pure[ErrorsOr]
+
+List("Badness").raiseError[ErrorsOr, Int]
+```
+Finally, there are helper methods to create instances of `Validated` from different sources. We can create them from
+`Exceptions`, as well as instances of `Try`, `Either`, and `Option`:
+
+```
+Validated.catchOnly[NumberFormatException]("foo".toInt)
+
+Validated catchNonFatal(sys.error("Badness"))
+
+Validated.fromTry(scala.util.Try("foo".toInt))
+
+Validated.fromEither[String, Int](Left("Badness"))
+
+Validated.fromOption[String, Int](None, "Badness")
+```
+
+We can combine instances of `Validated` using any of the methods or syntax described for `Semigroupal`.
+
+All of these techniques require an instance of `Semigroupal` to be in scope. As with `Either`, we need to fix the error
+type to create a type constructor with the correct number of parameters for `Semigroupal`:
+
+```
+type AllErrorsOr[A] = Validated[String, A]
+```
+
+`Validated` accumulates errors using a `Semigroup`, so we need one of those in scope to summon the `Semigroupal`.  
+Once we import a `Semigroup` for the error type, everything works as expected:
+
+```
+import cats.instances.string._ // for Semigroup
+
+Semigroupal[AllErrorsOr]
+```
+
+```
+import cats.syntax.apply._ // for tupled
+
+(
+  "Error 1".invalid[Int],
+  "Error 2".invalid[Int],
+).tupled
+
+import cats.instances.vector._ // for Semigroupal
+(
+  Vector(404).invalid[Int],
+  Vector(500).invalid[Int]
+).tupled
+```
+
+The `cats.data` package also provides the `NonEmptyList` and `NonEmptyVector` types that prevent us failing without at
+least one error:
+
+```
+import cats.data.NonEmptyVector
+
+(
+  NonEmptyVector.of("Error 1").invalid[Int],
+  NonEmptyVector.of("Error 2").invalid[Int]
+).tupled
+```
+
+`Validated` comes with a suite of methods that closely resemble those available for `Either`, including the methods from
+`cats.syntax.either`. We can use `map`, `leftMap`, and `bimap` to transform the values inside the valid and invalid
+sides:
+
+```
+123.valid.map(_ * 100)
+"?".invalid.leftMap(_.toString)
+123.valid[String].bimap(_ + "!", _ * 100)
+"?".invalid[Int].bimap(_ + "!, _ * 100)
+```
+
+We can't `flatMap` because `Validated` isn't a monad. However, Cats does provide a stand-in for `flatMap` called
+`andThen`. The type signature of `andThen` is identical to that of `flatMap`, but it has different name because it is
+not a lawful implementation with respect to the monad laws:
+
+```
+32.valid.andThen { a =>
+  10.valid.map { b =>
+    a + b
+  }
+}
+```
+
+If we want to do more than just `flatMap`, we can convert back and forth between `Validated` and `Either` using the
+`toEither` and `toValidated` methods. Note that `toValidated` comes from [`cats.syntax.either`]:
+
+```
+import cats.syntax.either._ // for toValidated
+
+"Badness".invalid[Int].toEither
+"Badness".invalid[Int].toEither.toValidated
+```
+
+As with `Either`, we can use the `ensure` method to fail with a specified error if a predicate dose not hold:
+
+```
+123.valid[String].ensure("Negative!")(_ > 0)
+```
+
+Finally, we can call `getOrElse` or `fold` to extract values from the `Valid` and `Invalid` cases:
+
+```
+"fail".invalid[Int].getOrElse(0)
+"fail".invalid[Int].fold(_ + "!!!", _.toString)
+```
 ## Monocle
 
 [Monocle](http://julien-truffaut.github.io/Monocle/) Optics library for Scala
 
+## Kind Projector
+
+If you frequently find yourself defining multiple type aliases when building monad stacks, you may want to try the
+[Kind Projector](https://github.com/typelevel/kind-projector) compiler plugin. Kind Projector enhances Scala's type
+syntax to make it easier to define partially applied type constructors.
