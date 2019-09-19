@@ -38,8 +38,6 @@ object Show {
 }
 ```
 
-Usage:
-
 ```scala
 import cats.Show
 import cats.syntax.show._ // for show
@@ -65,8 +63,6 @@ an instance Eq[A] in scope:
 
 * `===` compares two objects for equality;
 * `=!=` compares two objects for inequality;
-
-Usage:
 
 ```scala
 import cats.Eq
@@ -129,8 +125,6 @@ trait Monoid[A] {
 
 Cats provides syntax for the `combine` method in the form of the `|+|` operator.
 
-Usage:
-
 ```scala
 import cats.Monoid
 import cats.syntax.semigroup._ // for |+|
@@ -152,8 +146,6 @@ trait Monoid[A] extends Semigroup[A] {
   def empty: A
 }
 ```
-
-Usage:
 
 ```scala
 import cats.Semigroup
@@ -190,8 +182,6 @@ We obtain instances using the standard `Functor.apply` method on the companion o
 `Functor` provides the `lift` method, which converts a function of type `A => B` to one that operates over a functor and 
 has type `F[A] => F[B]`:
 
-Usage:
-
 ```scala
 import cats.Functor
 import cats.syntax.functor._ // for map
@@ -212,7 +202,6 @@ trait Contravariant[F[_]] {
 
 We can summon instances of `Contravariant` using the `Contravariant.apply` method.
 
-Usage:
 ```scala
 import cats.Contravariant
 import cats.syntax.contravariant._ // for contramap
@@ -231,7 +220,7 @@ trait Invariant[F[_]] {
   def imap[A, B](fa: F[A])(f: A => B)(g: B => A): F[B]
 }
 ```
-Usage:
+
 ```scala
 import cats.Invariant
 import cats.syntax.invariant._ // for imap
@@ -248,6 +237,221 @@ import cats.syntax.invariant._ // for imap
 implicit val symbolMonoid: Monoid[Symbol] = Monoid[String].imap(Symbol.apply)(_.name)
 ```
 
+### Monad
+
+[`cats.Monad`](https://typelevel.org/cats/api/cats/Monad.html)
+
+Informally, a monad is anything with a constructor and a `flatMap` method. 
+
+> A monad is a mechanism for sequencing computations.
+
+Here is a simplified version of the `Monad` type class in Cats:
+
+```scala
+trait Monad[F[_]] {
+  def pure[A](value: A): F[A]
+  
+  def flatMap[A, B](value: F[A])(func: A => F[B]): F[B]
+}
+```
+> *Monad Laws*
+>
+> *Left identity*: calling `pure` and transforming the result with `func` is the same as calling `func`:
+> ```
+> pure(a).flatMap(func) == func(a)
+> ```
+> *Right identity*: passing `pure` to `flatMap` is the same as doing nothing:
+> ```
+> m.flatMap(pure) == m
+> ```
+> *Associativity*: `flatMapping` over two functions `f` and `g` is the same as `flatMapping` over `f` and then 
+`flatMapping` over `g`:
+> ```
+> m.flatMap(f).flatMap(g) == m.flatMap(x => f(x).flatMap(g))
+> ```
+
+Every monad is also a functor:
+
+```
+def map[A, B](value: F[A])(func: A => B): F[B] = flatMap(value)(a => pure(func(a)))
+```
+
+`Monad` extends two other type classes: `FlatMap`, which provides the `flatMap` method, and `Applicative`, which 
+provides `pure`. `Applicative` also extends `Functor`.
+
+```scala
+import cats.Monad
+import cats.syntax.flatMap._ // for flatMap
+import cats.syntax.functor._ // for map
+import cats.syntax.applicative._ // for pure
+```
+
+### Id
+
+`cats.Id`
+
+Here is the definition of `Id` to explain:
+
+```scala
+type Id[A] = A
+```
+
+Cats provides instances of various type classes for `Id`, including `Functor` and `Monad`.
+
+### Either
+
+```scala
+import cats.syntax.either._ // for asLeft asRight
+```
+
+`cats.syntax.either` adds some useful extension methods to the `Either` companion object. The `catchOnly` and 
+`catchNonFatal` methods are great for capturing `Exceptions` as instances of `Either`:
+
+```
+Either.catchOnly[NumberFormatException]("foo".toInt)
+Either.catchNonFatal(sys.error("Badness"))
+```
+
+There are also methods for creating an `Either` from other data types:
+
+```
+Either.fromTry(scala.util.Try("foo".toInt))
+Either.fromOption[String, Int](None, "Badness") // res3: Either[String, Int] = Left(Badness)
+```
+
+We can use `orElse` and `getOrElse` to extract values from the right side or return a default:
+
+```
+"Error".asLeft[Int].getOrElse(0)
+"Error".asLeft[Int].orElse(2.asRight[String])
+```
+
+The `ensure` method allows us to check whether the right-hand value satisfies a predicate:
+
+```
+-1.asRight[String].ensure("Must be non-negative!")(_ > 0)
+```
+
+The `recover` and `recoverWith` methods provide similar error handling to their namesakes on `Future`:
+
+```
+"error".asLeft[Int].recover { case str: String => -1 }
+"error".asLeft[Int].recoverWith { case str: String => Right(-1) }
+```
+
+There are `leftMap` and `bimap` methods to complement `map`:
+
+```
+"foo".asLeft[Int].leftMap(_.reverse)
+6.asRight[String].bimap(_.reverse, _ * 7)
+"bar".asLeft[Int].bimap(_.reverse, _ * 7)
+```
+
+The `swap` method lets us exchange left for right:
+```
+123.asRight[String].swap
+```
+
+Finally, Cats adds a host of conversion methods: `toOption`, `toList`, `toTry`, `toValidated`, and so on.
+
+### MonadError
+
+[`cats.MonadError`](https://typelevel.org/cats/api/cats/MonadError.html)
+
+Cats provides an additional type class called `MonadError` that abstracts over `Either`-like data types that are used 
+for error handling. `MonadError` provides extra operations for raising and handling errors. 
+
+Here is a simplified version of the definition of `MonadError`:
+```
+trait MonadError[F[_], E] extends Monad[F] {
+  // Lift an error into the `F` context:
+  def raiseError[A](e: E): F[A]
+  
+  // Handle an error, potentially recovering from it:
+  def handleError[A](fa: F[A])(f: E => A): F[A]
+  
+  // Test an instance of `F`,
+  // failing if the predicate is not satisfied:
+  def ensure[A](fa: F[A])(e: E)(f: A => Boolean): F[A]
+}
+```
+
+In reality, `MonadError` extends another type class called `ApplicativeError`.
+
+`MonadError` is defined in terms of two type parameters:
+
+* `F` is the type of the monad;
+* `E` is the type of error contained within `F`.
+
+Here's an example where we instantiate the type class for `Either`:
+
+```scala
+import cats.MonadError
+import cats.instances.either._ // for MonadError
+
+type ErrorOr[A] = Either[String, A]
+
+val monadError = MonadError[ErrorOr, String]
+```
+
+```scala
+import cats.syntax.applicative._ // for pure
+import cats.syntax.applicativeError._ // for raiseError handleError
+import cats.syntax.monadError._ // for ensure
+```
+
+Cats provides instances of `MonadError` for numerous data types including `Either`, `Future`, and `Try`. The instance 
+for `Either` is customisable to any error type, whereas the instances for `Future` and `Try` always represent errors as
+`Throwables`.
+
+### Eval
+
+[`cats.Eval`](https://typelevel.org/cats/api/cats/Eval.html)
+
+`cats.Eval` is a monad that allows us to abstract over different models of evaluation.
+`Eval` has three subtypes: `Now`, `Later`, and `Always`. 
+
+We can extract the result of an `Eval` using its `value` method:
+```scala
+import cats.Eval
+val now = Eval.now(math.random + 1000)
+val later = Eval.later(math.random + 2000)
+val always = Eval.always(math.random + 3000)
+
+now.value
+later.value
+always.value
+```
+
+The three behaviours are summarized below:
+
+| Scala | Cats | Properties |
+| :--- | :--- | :--- |
+| `val` | `Now` | eager, memoized |
+| `lazy val` | `Later` | lazy, memoized |
+| `def` | `Always` | lazy, not memoized |
+
+`Eval's` `map` and `flatMap` methods add computations to a chain. In this case, however, the chain is stored explicitly 
+as a list of functions. The functions are't run util we call `Eval's` `value` method to request a result.
+
+While the semantics of the originating `Eval` instances are maintained, mapping functions are always called lazily on 
+demand (`def` semantics).
+
+`Eval` has a `memoize` method that allows us to memoize a chain of computations. 
+
+`Eval.defer` takes an existing instance of `Eval` and defers its evaluation. The `defer` method is trampolined like 
+`map` and `flatMap`:
+
+```scala
+import cats.Eval
+
+def factorial(n: BigInt): Eval[BigInt] = 
+    if (n == 1) {
+      Eval.now(n)
+    } else {
+      Eval.defer(factorial(n - 1).map(_ * n))
+    }
+```
 
 ## Monocle
 
