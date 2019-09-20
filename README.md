@@ -796,10 +796,35 @@ implicit val catMonoid: Monoid[Cat] = (
 
 ```
 
+### Apply
+
+[`cats.Apply`](https://typelevel.org/cats/api/cats/Apply.html)
+
+`cats.Apply` extends `Semigroupal` and `Functor` and adds an `ap` method that applies a parameter to a function within a
+context. 
+
+```
+trait Apply[F[_]] extends Semigroupal[F] with Functor[F] {
+  def ap[A, B](ff: F[A => B])(fa: F[A]): F[B]
+  
+  def product[A, B](fa: F[A], fb: F[B]): F[(A, B)] = ap(map(fa)(a => (b: B) => (a, b)))(fb)
+}
+```
+
+
 ### Applicative
 
-`Applicative` extends `Semigroupal` and `Functor`. It provides a way of applying functions to parameters within a
-context. `Applicative` is the source of the `pure` method.
+[`cats.Applicative`](https://typelevel.org/cats/api/cats/Applicative.html)
+
+`Applicative` extends `Apply`, the source of the `pure` method.
+
+``` 
+trait Applicative[F[_]] extends Apply[F] {
+  def pure[A](a: A): F[A]
+}
+```
+
+`Applicative` is related to `Apply` as `Monoid` is related to `Semigroup`.
 
 ### Validated
 
@@ -962,6 +987,91 @@ Finally, we can call `getOrElse` or `fold` to extract values from the `Valid` an
 "fail".invalid[Int].getOrElse(0)
 "fail".invalid[Int].fold(_ + "!!!", _.toString)
 ```
+
+### Foldable
+
+[`cats.Foldable`](https://typelevel.org/cats/api/cats/Foldable.html)
+
+`Foldable` abstracts the familiar `foldLeft` and `foldRight` operations.
+
+```scala
+import cats.Foldable
+import cats.instances.list._ //for Foldable
+
+val ints = List(1, 2, 3)
+
+Foldable[List].foldLeft(ints, 0)(_ + _)
+```
+
+`Foldable` defines `foldRight` differently to `foldLeft`, in terms of the `Eval` monad:
+
+```
+def foldRight[A, B](fa: F[A], lb: Eval[B])(f: (A, Eval[B]) => Eval[B]): Eval[B]
+```
+
+Using `Eval` means folding is always stack safe.
+
+`Foldable` provides us with a host of useful methods defined on top of `foldLeft`. Many of these are facsimiles of
+familiar methods from the standard library: `find`, `exists`, `forall`, `toList`, `isEmpty`, `nonEmpty`, and so on:
+
+```
+Foldable[Option].nonEmpty(Option(42))
+Foldable[List].find(List(1, 2, 3))(_ % 2 == 0)
+```
+
+Cats provides two methods that make use of `Monoids`:
+
+* `combineAll` (add its alias `fold`) combines all elements in the sequence using their `Monoid`;
+* `foldMap` maps a user-supplied function over the sequence and combines the result using a `Monoid`.
+
+```
+import cats.instances.int._ // for Monoid
+
+Foldable[List].combineAll(List(1, 2, 3))
+
+import cats.instances.string._ // for Monoid
+
+Foldable[List].foldMap(List(1, 2, 3))(_.toString)
+```
+
+Finally, we can compose `Foldables` to support deep traversal of nested sequences:
+
+```
+import cats.instances.vector._ // for Monoid
+
+val ints = List(Vector(1, 2, 3), Vector(4, 5, 6))
+
+(Foldable[List] compose Foldable[Vector]).combineAll(ints) // 21
+```
+
+Syntax:
+
+```
+import cats.syntax.foldable._ // for combineAll and foldMap
+
+List(1, 2, 3).combineAll
+
+List(1, 2, 3).foldMap(_.toString)
+```
+### Traverse
+
+[`cats.Traverse`](https://typelevel.org/cats/api/cats/Traverse.html)
+
+`Traverse` is a higher-level abstraction that uses `Applicatives` to iterate with less pain than folding.
+
+```
+trait Traverse[F[_]] {
+  def traverse[G[_]: Applicative, A, B](inputs: F[A])(func: A => G[B]): G[F[B]]
+
+  def sequence[G[_]: Applicative, B](inputs: F[G[B]]): G[F[B]] = traverse(inputs)(identit**y)
+```
+
+We can summon instances as usual using `Traverse.apply` and use the `traverse` and `sequence` methods.
+
+```
+import cats.syntax.traverse._ // for sequence and traverse
+```
+
 ## Monocle
 
 [Monocle](http://julien-truffaut.github.io/Monocle/) Optics library for Scala
