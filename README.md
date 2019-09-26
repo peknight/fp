@@ -1,9 +1,29 @@
 # Note
 
 ## Functional Programming in Scala
+
 [fpinscala github repo](https://github.com/fpinscala/fpinscala.git "Functional Programming in Scala's github repository")  
 
+### Stream
+
+`Stream` is deprecated. Use `LazyList` (which is fully lazy) instead of `Stream` (which has a lazy tail only)
+
+### LazyList
+
+`unfold` is a general stream-building function. It takes an initial state, and a function for producing both the next
+state and the next value in the generated stream.
+
+```
+def unfold[A, S](init: S)(f: S => Option[(A, S)]): LazyList[A] = ???
+```
+
+The `unfold` function is an example of what's sometimes called a *corecursive* (共递归) function. Whereas a recursive
+function consumes data, a corecursive function produces data.
+
+Corecursion is also sometimes called *guarded recursion*, and productivity is also sometimes called *cotermination*
+
 ## Scala With Cats
+
 [Scala with Cats Book](https://underscore.io/books/scala-with-cats/)
 
 ### The implicitly Method
