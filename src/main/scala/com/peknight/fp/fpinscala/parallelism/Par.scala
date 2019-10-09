@@ -1,69 +1,34 @@
 package com.peknight.fp.fpinscala.parallelism
 
-import java.util.concurrent.{Callable, ExecutorService, Future, LinkedBlockingDeque, ThreadPoolExecutor, TimeUnit}
+import java.util.concurrent._
+import java.util.concurrent.atomic.AtomicReference
 
+sealed trait Future[+A] {
+  private[parallelism] def apply(k: A => Unit): Unit
+}
 object Par {
-  type Par[A] = ExecutorService => Future[A]
-  def unit[A](a: => A): Par[A] = (es: ExecutorService) => UnitFuture(a)
+  type Par[+A] = ExecutorService => Future[A]
 
-  private case class UnitFuture[A](get: A) extends Future[A] {
-    def cancel(mayInterruptIfRunning: Boolean): Boolean = false
-    def isCancelled: Boolean = false
-    def isDone: Boolean = true
-    def get(timeout: Long, unit: TimeUnit): A = get
+  def run[A](es: ExecutorService)(p: Par[A]): A = {
+    val ref = new AtomicReference[A]
+    val latch = new CountDownLatch(1)
+    p(es) { a => ref.set(a); latch.countDown }
+    latch.await
+    ref.get
   }
 
-  def map2_old[A, B, C](pa: Par[A], pb: Par[B])(f: (A, B) => C): Par[C] = (es: ExecutorService) => {
-    val af = pa(es)
-    val bf = pb(es)
-    UnitFuture(f(af.get, bf.get))
+  def unit[A](a: => A): Par[A] = _ => new Future[A] {
+    def apply(cb: A => Unit): Unit = cb(a)
   }
 
-  def map2[A, B, C](pa: Par[A], pb: Par[B])(f: (A, B) => C): Par[C] = (es: ExecutorService) => {
-    val (af, bf) = (pa(es), pb(es))
-    Map2Future(af, bf, f)
+  def fork[A](a: => Par[A]): Par[A] = es => new Future[A] {
+    def apply(cb: A => Unit): Unit = eval(es)(a(es)(cb))
   }
 
-  case class Map2Future[A, B, C](a: Future[A], b: Future[B], f: (A, B) => C) extends Future[C] {
-    @volatile var cache: Option[C] = None
+  def eval(es: ExecutorService)(r: => Unit): Unit = es.submit(new Callable[Unit] { def call = r })
 
-    override def cancel(mayInterruptIfRunning: Boolean): Boolean =
-      a.cancel(mayInterruptIfRunning) || b.cancel(mayInterruptIfRunning)
+  def map2[A, B, C](pa: Par[A], pb: Par[B])(f: (A, B) => C): Par[C] = ???
 
-    override def isCancelled: Boolean = a.isCancelled || b.isCancelled
-
-    override def isDone: Boolean = cache.isDefined
-
-    override def get(): C = compute(Long.MaxValue)
-
-    override def get(timeout: Long, unit: TimeUnit): C = compute(TimeUnit.NANOSECONDS.convert(timeout, unit))
-
-    private def compute(timeoutInNanos: Long): C = cache match {
-      case Some(c) => c
-      case None =>
-        val start = System.nanoTime
-        val ar = a.get(timeoutInNanos, TimeUnit.NANOSECONDS)
-        val stop = System.nanoTime
-        val aTime = stop - start
-        val br = b.get(timeoutInNanos - aTime, TimeUnit.NANOSECONDS)
-        val ret = f(ar, br)
-        cache = Some(ret)
-        ret
-    }
-  }
-
-  /*
-   * This is the simplest and most natural implementation of `fork`, but there are some problems with it -- for one,
-   * the outer Callable will block waiting for the "inner" task to complete. Since this blocking occupies a thread in
-   * our thread pool, or whatever resource backs the ExecutorService, this implies that we're losing out on some
-   * potential parallelism. Essentially, we're using two threads when one should suffice. This is a symptom of a more
-   * serious problem with the implementation that we'll discuss later in the chapter.
-   */
-  def fork[A](a: => Par[A]): Par[A] = es => es.submit(new Callable[A] {
-    def call = a(es).get
-  })
-
-  def run[A](s: ExecutorService)(a: Par[A]): Future[A] = ???
   def get[A](a: Par[A]): A = ???
 
   def lazyUnit[A](a: => A): Par[A] = fork(unit(a))
@@ -102,11 +67,16 @@ object Par {
     map(sequence(pars))(_.flatten)
   }
 
-  def equal[A](e: ExecutorService)(p1: Par[A], p2: Par[A]): Boolean = p1(e).get == p2(e).get
-
+//  def equal[A](e: ExecutorService)(p1: Par[A], p2: Par[A]): Boolean = p1(e).get == p2(e).get
 }
 
 object ParTest extends App {
+  val S = Executors.newFixedThreadPool(4)
+  val echoer = Actor[String](S) {
+    msg => println (s"Got message: '$msg'")
+  }
+  echoer ! "hello"
+
   Par.run(new ThreadPoolExecutor(5, 5, 60, TimeUnit.SECONDS,
     new LinkedBlockingDeque[Runnable](10)))(Par.fork(Par.unit{
     Thread.sleep(1000)
