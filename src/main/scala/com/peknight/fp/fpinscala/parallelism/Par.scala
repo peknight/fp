@@ -13,7 +13,7 @@ object Par {
     def get(timeout: Long, unit: TimeUnit): A = get
   }
 
-  def map2[A, B, C](pa: Par[A], pb: Par[B])(f: (A, B) => C): Par[C] = (es: ExecutorService) => {
+  def map2_old[A, B, C](pa: Par[A], pb: Par[B])(f: (A, B) => C): Par[C] = (es: ExecutorService) => {
     val af = pa(es)
     val bf = pb(es)
     UnitFuture(f(af.get, bf.get))
@@ -64,6 +64,8 @@ object Par {
   })
 
   def run[A](s: ExecutorService)(a: Par[A]): Future[A] = ???
+  def get[A](a: Par[A]): A = ???
+
   def lazyUnit[A](a: => A): Par[A] = fork(unit(a))
 
   def asyncF[A, B](f: A => B): A => Par[B] = a => lazyUnit(f(a))
@@ -99,7 +101,11 @@ object Par {
     val pars: List[Par[List[A]]] = as.map (asyncF((a: A) => if (f(a)) List(a) else List()))
     map(sequence(pars))(_.flatten)
   }
+
+  def equal[A](e: ExecutorService)(p1: Par[A], p2: Par[A]): Boolean = p1(e).get == p2(e).get
+
 }
+
 object ParTest extends App {
   Par.run(new ThreadPoolExecutor(5, 5, 60, TimeUnit.SECONDS,
     new LinkedBlockingDeque[Runnable](10)))(Par.fork(Par.unit{
