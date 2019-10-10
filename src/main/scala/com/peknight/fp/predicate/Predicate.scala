@@ -1,10 +1,10 @@
-package com.peknight.fp
+package com.peknight.fp.predicate
 
 import cats.Semigroup
 import cats.data.Validated
 import cats.data.Validated._
-import cats.syntax.semigroup._
 import cats.syntax.apply._
+import cats.syntax.semigroup._
 import cats.syntax.validated._
 
 /**

@@ -1,4 +1,4 @@
-package com.peknight.fp.fpinscala.parallelism
+package com.peknight.fp.parallelism
 
 import java.util.concurrent.atomic.{AtomicInteger, AtomicReference}
 import java.util.concurrent.{Callable, ExecutorService}
