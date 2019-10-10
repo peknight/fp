@@ -10,8 +10,10 @@ lazy val fp = (project in file("."))
     .enablePlugins(JavaAppPackaging)
     .settings(
       name := "pek-fp",
-      libraryDependencies +=
+      libraryDependencies ++= Seq(
         "org.typelevel" %% "cats-core" % "2.0.0",
+        "org.scalacheck" %% "scalacheck" % "1.14.1"
+      ),
       scalacOptions ++= Seq(
         "-Xfatal-warnings",
         "-language:higherKinds",

@@ -1101,3 +1101,22 @@ import cats.syntax.traverse._ // for sequence and traverse
 If you frequently find yourself defining multiple type aliases when building monad stacks, you may want to try the
 [Kind Projector](https://github.com/typelevel/kind-projector) compiler plugin. Kind Projector enhances Scala's type
 syntax to make it easier to define partially applied type constructors.
+
+## ScalaCheck
+
+[ScalaCheck](https://github.com/typelevel/scalacheck)
+
+See *Functional Programming in Scala* chapter 8 ***Property-based testing***
+
+```scala
+import org.scalacheck.Gen
+val intList = Gen.listOf(Gen.choose(0, 100))
+
+import org.scalacheck.Prop._ // forAll
+val prop = forAll(intList)(ns => ns.reverse.reverse == ns) &&
+  forAll(intList)(ns => ns.headOption == ns.reverse.lastOption)
+val failingProp = forAll(intList)(ns => ns.reverse == ns)
+
+prop.check
+failingProp.check
+```
