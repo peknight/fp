@@ -15,7 +15,8 @@ object TestingApp extends App {
 
   println("\n----------\n")
 
-
+  val intProp = forAll(Gen.choose(0, 200))(_ >= 0)
+  intProp.check
 
   println("\n----------\n")
 
