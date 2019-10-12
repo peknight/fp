@@ -13,6 +13,10 @@ case class Falsified(failure: FailedCase, successes: SuccessCount) extends Resul
   def isFalsified = true
 }
 
+case object Proved extends Result {
+  def isFalsified = false
+}
+
 object Result {
   type FailedCase = String
   type SuccessCount = Int

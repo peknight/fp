@@ -24,6 +24,8 @@ case class Gen[+A](sample: State[RNG, A]) {
 object Gen {
   def listOf[A](g: Gen[A]): SGen[List[A]] = SGen(listOfN(_, g))
 
+  def listOf1[A](g: Gen[A]): SGen[List[A]] = SGen(n => listOfN(n max 1, g))
+
   def listOfN[A](n: Int, g: Gen[A]): Gen[List[A]] = Gen(State.sequence(List.fill(n)(g.sample)))
 
   def choose(start: Int, stopExclusive: Int): Gen[Int] =
@@ -39,9 +41,20 @@ object Gen {
 
   def double: Gen[Double] = Gen(State(RNG.double))
 
-  def unioin[A](g1: Gen[A], g2: Gen[A]): Gen[A] = boolean.flatMap(b => if (b) g1 else g2)
+  def union[A](g1: Gen[A], g2: Gen[A]): Gen[A] = boolean.flatMap(b => if (b) g1 else g2)
 
   def weighted[A](g1: (Gen[A], Double), g2: (Gen[A], Double)): Gen[A] = double.flatMap { d =>
     if (d < g1._2.abs / (g1._2.abs + g2._2.abs)) g1._1 else g2._1
+  }
+
+  trait Cogen[-A] {
+    def sample(a: A, rng: RNG): RNG
+  }
+
+  def fn[A,B](in: Cogen[A])(out: Gen[B]): Gen[A => B] = {
+    Gen { State { (rng: RNG) =>
+      val func: A => B = (a: A) => out.sample.run(in.sample(a, rng))._1
+      (func, rng)
+    }}
   }
 }

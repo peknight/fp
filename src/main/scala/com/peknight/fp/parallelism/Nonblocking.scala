@@ -99,6 +99,8 @@ object Nonblocking {
 
     def join[A](a: Par[Par[A]]): Par[A] = es => (cb: A => Unit) => a(es)(p => eval(es)(p(es)(cb)))
 
+    def equal[A](p1: Par[A], p2: Par[A]): Par[Boolean] = map2(p1, p2)(_ == _)
+
     /* Gives us infix syntax for `Par`. */
     import scala.language.implicitConversions
     implicit def toParOps[A](p: Par[A]): ParOps[A] = new ParOps(p)
