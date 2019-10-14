@@ -1,9 +1,9 @@
-package com.peknight.fp.fpinscala.testing
+package com.peknight.fp.testing
 
 import java.util.concurrent.Executors
 
 import Prop._
-import com.peknight.fp.fpinscala.testing.Gen.{choose, unit, weighted}
+import com.peknight.fp.testing.Gen.{choose, unit, weighted}
 import com.peknight.fp.parallelism.Nonblocking.Par
 import com.peknight.fp.state.RNG
 

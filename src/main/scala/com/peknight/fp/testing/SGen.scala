@@ -1,4 +1,4 @@
-package com.peknight.fp.fpinscala.testing
+package com.peknight.fp.testing
 
 case class SGen[+A](forSize: Int => Gen[A]) {
 
