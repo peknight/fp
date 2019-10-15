@@ -121,8 +121,8 @@ none[Int]
 
 Formally, a monoid for a type `A` is:
 
-* an operation `combine` with type `(A, A) => A`
-* an element `empty` of type `A`
+* an operation `combine` (or `op` in fpinscala) with type `(A, A) => A`
+* an element `empty` (or `zero` in fpinscala) of type `A`
 
 Here is a simplified version of the difinition from Cats:
 
