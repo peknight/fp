@@ -17,7 +17,8 @@ lazy val fp = (project in file("."))
       scalacOptions ++= Seq(
         "-Xfatal-warnings",
         "-language:higherKinds",
-        "-deprecation"
+        "-deprecation",
+        "-feature"
       )
     )
 
