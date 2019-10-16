@@ -20,7 +20,7 @@ def unfold[A, S](init: S)(f: S => Option[(A, S)]): LazyList[A] = ???
 The `unfold` function is an example of what's sometimes called a *corecursive* function. Whereas a recursive
 function consumes data, a corecursive function produces data.
 
-Corecursion is also sometimes called *guarded recursion*, and productivity is also sometimes called *cotermination*
+Corecursion is also sometimes called *guarded recursion*, and productivity is also sometimes called *cotermination*.
 
 ### TODO List
 
@@ -123,6 +123,10 @@ Formally, a monoid for a type `A` is:
 
 * an operation `combine` (or `op` in fpinscala) with type `(A, A) => A`
 * an element `empty` (or `zero` in fpinscala) of type `A`
+
+In *Functional Programming in Scala*:  
+A monoid is a type together with a binary operation (`op`) over that type, satisfying associativity and having an
+identity element (`zero`)
 
 Here is a simplified version of the difinition from Cats:
 
@@ -274,7 +278,7 @@ Here is a simplified version of the `Monad` type class in Cats:
 
 ```scala
 trait Monad[F[_]] {
-  def pure[A](value: A): F[A]
+  def pure[A](value: A): F[A] // fpinscala‘s `unit`
 
   def flatMap[A, B](value: F[A])(func: A => F[B]): F[B]
 }
