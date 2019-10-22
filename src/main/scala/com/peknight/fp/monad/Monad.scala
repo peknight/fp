@@ -1,5 +1,7 @@
 package com.peknight.fp.monad
 
+import com.peknight.fp.testing.Gen
+
 trait Monad[F[_]] {
   def unit[A](a: => A): F[A]
   def flatMap[A, B](fa: F[A])(f: A => F[B]): F[B]
@@ -9,9 +11,18 @@ trait Monad[F[_]] {
 
   def sequence[A](lma: List[F[A]]): F[List[A]] = traverse(lma)((a: F[A]) => a)
   def traverse[A, B](la: List[A])(f: A => F[B]): F[List[B]] = la.foldRight(unit(List.empty[B])) { (a: A, flb: F[List[B]]) =>
-    map(flb) { lb => f(a) :: lb }
+    map2(f(a), flb)(_ :: _)
   }
 
+  def replicateM[A](n: Int, ma: F[A]): F[List[A]] = sequence(List.fill(n)(ma))
+
+  def product[A, B](ma: F[A], mb: F[B]): F[(A, B)] = map2(ma, mb)((_, _))
+
+  def filterM[A](ms: List[A])(f: A => F[Boolean]): F[List[A]] = {
+    ms.foldRight(unit(List.empty[A])) { (a, fla) =>
+      map2(f(a), fla) { (flag, la) => if (flag) a :: la else la }
+    }
+  }
 }
 object Monad {
   import com.peknight.fp.testing._
@@ -52,4 +63,21 @@ object Monad {
     def unit[A](a: => A): State[S, A] = State(s => (a, s))
     def flatMap[A, B](st: State[S, A])(f: A => State[S, B]): State[S, B] = st flatMap f
   }
+}
+
+object MonadApp extends App {
+  case class Order(item: Item, quantity: Int)
+  case class Item(name: String, price: Double)
+
+  val genItem: Gen[Item] = for {
+    name <- Gen.stringN(3)
+    price <- Gen.uniform.map(_ * 10)
+  } yield Item(name, price)
+
+  val genOrder: Gen[Order] = for {
+    item <- genItem
+    quantity <- Gen.choose(1, 100)
+  } yield Order(item, quantity)
+
+  println(Monad.optionMonad.filterM(List(1, 2, 3, 4, 5))(a => None))
 }
