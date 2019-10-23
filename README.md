@@ -1096,7 +1096,7 @@ List(1, 2, 3).foldMap(_.toString)
 trait Traverse[F[_]] {
   def traverse[G[_]: Applicative, A, B](inputs: F[A])(func: A => G[B]): G[F[B]]
 
-  def sequence[G[_]: Applicative, B](inputs: F[G[B]]): G[F[B]] = traverse(inputs)(identit**y)
+  def sequence[G[_]: Applicative, B](inputs: F[G[B]]): G[F[B]] = traverse(inputs)(identity)
 ```
 
 We can summon instances as usual using `Traverse.apply` and use the `traverse` and `sequence` methods.
