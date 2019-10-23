@@ -270,9 +270,12 @@ implicit val symbolMonoid: Monoid[Symbol] = Monoid[String].imap(Symbol.apply)(_.
 
 [`cats.Monad`](https://typelevel.org/cats/api/cats/Monad.html)
 
-Informally, a monad is anything with a constructor and a `flatMap` method.
+> Informally, a monad is anything with a constructor and a `flatMap` method.
 
 > A monad is a mechanism for sequencing computations.
+
+> A monad is an implementation of one of the minimal sets of monadic combinators, satisfying the laws of associativity
+> and identity.
 
 Here is a simplified version of the `Monad` type class in Cats:
 

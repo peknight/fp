@@ -2,7 +2,7 @@ package com.peknight.fp.monad
 
 import com.peknight.fp.testing.Gen
 
-trait Monad[F[_]] {
+trait Monad[F[_]] extends Functor[F]{
   def unit[A](a: => A): F[A]
   def flatMap[A, B](fa: F[A])(f: A => F[B]): F[B]
 
@@ -23,6 +23,16 @@ trait Monad[F[_]] {
       map2(f(a), fla) { (flag, la) => if (flag) a :: la else la }
     }
   }
+
+  def compose[A, B, C](f: A => F[B], g: B => F[C]): A => F[C] = a => flatMap(f(a))(g)
+
+  def flatMapViaCompose[A, B](fa: F[A])(f: A => F[B]): F[B] = compose((_: Unit) => fa, f)(())
+
+  def join[A](mma: F[F[A]]): F[A] = flatMap(mma)(ma => ma)
+
+  def flatMapViaJoin[A, B](fa: F[A])(f: A => F[B]): F[B] = join(map(fa)(f))
+
+  def composeViaJoin[A, B, C](f: A => F[B], g: B => F[C]): A => F[C] = a => join(map(f(a))(g))
 }
 object Monad {
   import com.peknight.fp.testing._
@@ -59,25 +69,8 @@ object Monad {
   }
 
   import com.peknight.fp.state._
-  def stateMonad[S] = new Monad[({type f[x] = State[S, x]})#f] {
+  def stateMonad[S]: Monad[({type f[x] = State[S, x]})#f] = new Monad[({type f[x] = State[S, x]})#f] {
     def unit[A](a: => A): State[S, A] = State(s => (a, s))
     def flatMap[A, B](st: State[S, A])(f: A => State[S, B]): State[S, B] = st flatMap f
   }
-}
-
-object MonadApp extends App {
-  case class Order(item: Item, quantity: Int)
-  case class Item(name: String, price: Double)
-
-  val genItem: Gen[Item] = for {
-    name <- Gen.stringN(3)
-    price <- Gen.uniform.map(_ * 10)
-  } yield Item(name, price)
-
-  val genOrder: Gen[Order] = for {
-    item <- genItem
-    quantity <- Gen.choose(1, 100)
-  } yield Order(item, quantity)
-
-  println(Monad.optionMonad.filterM(List(1, 2, 3, 4, 5))(a => None))
 }
