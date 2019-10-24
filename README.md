@@ -1133,3 +1133,9 @@ val failingProp = forAll(intList)(ns => ns.reverse == ns)
 prop.check
 failingProp.check
 ```
+
+## Proof Assistant
+
+Coq
+
+Agda

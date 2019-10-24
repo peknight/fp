@@ -1,22 +1,13 @@
 package com.peknight.fp.monad
 
-import com.peknight.fp.testing.Gen
+import com.peknight.fp.applicative.Applicative
 
-trait Monad[F[_]] extends Functor[F]{
+trait Monad[F[_]] extends Applicative[F] {
   def unit[A](a: => A): F[A]
   def flatMap[A, B](fa: F[A])(f: A => F[B]): F[B]
 
-  def map[A, B](fa: F[A])(f: A => B): F[B] = flatMap(fa)(a => unit(f(a)))
-  def map2[A, B, C](fa: F[A], fb: F[B])(f: (A, B) => C): F[C] = flatMap(fa) { a => map(fb) { b => f(a, b) } }
-
-  def sequence[A](lma: List[F[A]]): F[List[A]] = traverse(lma)((a: F[A]) => a)
-  def traverse[A, B](la: List[A])(f: A => F[B]): F[List[B]] = la.foldRight(unit(List.empty[B])) { (a: A, flb: F[List[B]]) =>
-    map2(f(a), flb)(_ :: _)
-  }
-
-  def replicateM[A](n: Int, ma: F[A]): F[List[A]] = sequence(List.fill(n)(ma))
-
-  def product[A, B](ma: F[A], mb: F[B]): F[(A, B)] = map2(ma, mb)((_, _))
+  override def map[A, B](fa: F[A])(f: A => B): F[B] = flatMap(fa)(a => unit(f(a)))
+  override def map2[A, B, C](fa: F[A], fb: F[B])(f: (A, B) => C): F[C] = flatMap(fa) { a => map(fb) { b => f(a, b) } }
 
   def filterM[A](ms: List[A])(f: A => F[Boolean]): F[List[A]] = {
     ms.foldRight(unit(List.empty[A])) { (a, fla) =>
