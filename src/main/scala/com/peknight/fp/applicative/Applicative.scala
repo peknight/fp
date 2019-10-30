@@ -83,6 +83,3 @@ object Applicative {
         }
     }
 }
-object ApplicativeApp extends App {
-
-}

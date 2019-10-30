@@ -22,11 +22,6 @@ function consumes data, a corecursive function produces data.
 
 Corecursion is also sometimes called *guarded recursion*, and productivity is also sometimes called *cotermination*.
 
-### TODO List
-
-***Exercise 8.11***
-
-In part 3 we'll discuss ways to factoring out this sort of duplication.
 
 ## Scala With Cats
 
