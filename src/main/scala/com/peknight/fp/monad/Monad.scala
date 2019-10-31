@@ -15,6 +15,18 @@ trait Monad[F[_]] extends Applicative[F] {
     }
   }
 
+  def as[A,B](a: F[A])(b: B): F[B] = map(a)(_ => b)
+  def skip[A](a: F[A]): F[Unit] = as(a)(())
+  def foldM[A,B](l: LazyList[A])(z: B)(f: (B,A) => F[B]): F[B] =
+    l match {
+      case h #:: t => flatMap(f(z,h))(z2 => foldM(t)(z2)(f))
+      case _ => unit(z)
+    }
+  def foldM_[A,B](l: LazyList[A])(z: B)(f: (B,A) => F[B]): F[Unit] =
+    skip { foldM(l)(z)(f) }
+  def foreachM[A](l: LazyList[A])(f: A => F[Unit]): F[Unit] =
+    foldM_(l)(())((_,a) => skip(f(a)))
+
   def compose[A, B, C](f: A => F[B], g: B => F[C]): A => F[C] = a => flatMap(f(a))(g)
 
   def flatMapViaCompose[A, B](fa: F[A])(f: A => F[B]): F[B] = compose((_: Unit) => fa, f)(())
