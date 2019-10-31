@@ -51,7 +51,7 @@ trait Traverse[F[_]] extends Functor[F] with Foldable[F] { self =>
     case (a, b :: bs) => ((a, Some(b)), bs)
   })._1
 
-  def zipL[A, B](fa: F[A], fb: F[B]): F[(Option[A], B)] = (mapAccum(fb, toList(fa)) {
+  def zipR[A, B](fa: F[A], fb: F[B]): F[(Option[A], B)] = (mapAccum(fb, toList(fa)) {
     case (b, Nil) => ((None, b), Nil)
     case (b, a :: as) => ((Some(a), b), as)
   })._1
@@ -66,16 +66,12 @@ trait Traverse[F[_]] extends Functor[F] with Foldable[F] { self =>
       }
     }
 
-  def composeM[F[_], G[_]](F: Monad[F], G: Monad[G], T: Traverse[G]): Monad[({type f[x] = F[G[x]]})#f] =
-    new Monad[({type f[x] = F[G[x]]})#f] {
-      override def unit[A](a: => A): F[G[A]] = F.unit(G.unit(a))
-      override def flatMap[A, B](fa: F[G[A]])(f: A => F[G[B]]): F[G[B]] = F.flatMap(fa) { (ga: G[A]) =>
-        G.flatMap(ga) { (a: A) =>
-          T.sequence(f(a))
-        }
-      }
+  def composeM[G[_], H[_]](G: Monad[G], H: Monad[H], T: Traverse[H]): Monad[({type f[x] = G[H[x]]})#f] =
+    new Monad[({type f[x] = G[H[x]]})#f] {
+      override def unit[A](a: => A): G[H[A]] = G.unit(H.unit(a))
+      override def flatMap[A, B](gha: G[H[A]])(f: A => G[H[B]]): G[H[B]] =
+        G.map(G.flatMap(gha) { (ha: H[A]) => T.sequence(H.map(ha) { (a: A) => f(a) })(G) })(H.join(_))
     }
-
 }
 object Traverse {
   val listTraverse = new Traverse[List] {
@@ -99,6 +95,7 @@ object Traverse {
 
   type Const[M, B] = M
 
+  import scala.language.implicitConversions
   implicit def monoidApplicative[M](M: Monoid[M]):Applicative[({type f[x] = Const[M, x]})#f] =
     new Applicative[({type f[x] = Const[M, x]})#f] {
       def unit[A](a: => A): M = M.zero
