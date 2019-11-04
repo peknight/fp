@@ -22,6 +22,25 @@ function consumes data, a corecursive function produces data.
 
 Corecursion is also sometimes called *guarded recursion*, and productivity is also sometimes called *cotermination*.
 
+### Correction
+
+#### 13.3.2 Trampolining: a general solution to stack overflow
+
+[Mistake in `TailRec` REPL session](https://github.com/fpinscala/fpinscala/issues/308)
+
+This code:
+```
+val g = List.fill(100000)(f).foldLeft(f) {
+  (a, b) => x => Suspend(() => a(x).flatMap(b))
+}
+```
+
+Should be:
+
+```
+val g = List.fill(100000)(f).foldLeft(f) {
+  (a, b) => x => Suspend(() => ()).flatMap { _ => a(x).flatMap(b) }
+```
 
 ## Scala With Cats
 

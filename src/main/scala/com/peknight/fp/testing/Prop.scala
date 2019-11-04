@@ -6,6 +6,7 @@ import Prop._
 import com.peknight.fp.testing.Gen.{choose, unit, weighted}
 import com.peknight.fp.parallelism.Nonblocking.Par
 import com.peknight.fp.state.RNG
+import com.peknight.fp.testing.Result._
 
 case class Prop(run: (MaxSize, TestCases, RNG) => Result) {
   def &&(p: Prop): Prop = Prop{ (max, n, rng) =>

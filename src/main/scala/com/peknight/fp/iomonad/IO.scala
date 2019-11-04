@@ -23,6 +23,13 @@ object IO extends Monad[IO] {
       x match {
         case Return(a) => run(f(a))
         case Suspend(r) => run(f(r()))
+        /*
+         * FlatMap(FlatMap(y, g), f)
+         * y.flatMap(g).flatMap(f)
+         * y.flatMap(a => g(a).flatMap(f)) // Monad Associativity Law
+         * y.flatMap(a => FlatMap(g(a), f))
+         * FlatMap(y, a => FlatMap(g(a), f))
+         */
         case FlatMap(y, g) => run(y.flatMap(a => g(a).flatMap(f)))
       }
     }
@@ -81,10 +88,4 @@ object IO extends Monad[IO] {
       } yield () }
     }
   )
-}
-
-object IOApp extends App {
-  import IO._
-  val p = IO.forever(PrintLine("Still going..."))
-  run(p)
 }
