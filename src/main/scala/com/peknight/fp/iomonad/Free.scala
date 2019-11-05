@@ -1,6 +1,8 @@
 package com.peknight.fp.iomonad
 
+import com.peknight.fp.iomonad.Translate.~>
 import com.peknight.fp.monad.Monad
+import com.peknight.fp.parallelism.Nonblocking.Par
 
 import scala.annotation.tailrec
 
@@ -45,4 +47,21 @@ object Free {
     case FlatMap(Suspend(r), f) => F.flatMap(r)(a => run(f(a)))
     case _ => sys.error("Impossible, since `step` eliminates these cases")
   }
+
+  def runFree[F[_], G[_], A](free: Free[F, A])(t: F ~> G)(implicit G: Monad[G]): G[A] = step(free) match {
+    case Return(a) => G.unit(a)
+    case Suspend(r) => t(r)
+    case FlatMap(Suspend(r), f) => G.flatMap(t(r))(a => runFree(f(a))(t))
+    case _ => sys.error("Impossible, since `step` eliminates these cases")
+  }
+
+  def translate[F[_], G[_], A](f: Free[F, A])(fg: F ~> G): Free[G, A] = {
+    type FreeG[A] = Free[G, A]
+    val t = new (F ~> FreeG) {
+      def apply[A](a: F[A]): Free[G, A] = Suspend { fg(a) }
+    }
+    runFree(f)(t)(freeMonad[G])
+  }
+
+  type IO[A] = Free[Par, A]
 }

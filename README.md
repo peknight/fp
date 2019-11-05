@@ -4,6 +4,14 @@
 
 [fpinscala github repo](https://github.com/fpinscala/fpinscala.git "Functional Programming in Scala's github repository")  
 
+### Referential Transparency
+
+* An expression `e` is referentially transparent if for all programs `p` all occurrences of `e` in `p` can be replaced
+by the result of evaluating `e` without affecting the meaning of `p`.
+
+* A function `f` is pure if the expression `f(x)` is referentially transparent for all referentially transparent x.
+
+
 ### ~~Stream~~
 
 `Stream` is deprecated. Use `LazyList` (which is fully lazy) instead of `Stream` (which has a lazy tail only)

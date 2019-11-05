@@ -31,7 +31,7 @@ object Nonblocking {
      * Helper function for constructing `Par` values out of calls to non-blocking continuation-passing-style APIs.
      * This will come in handy in Chapter 13.
      */
-    private[parallelism] def async[A](f: (A => Unit) => Unit): Par[A] = _ => (cb: A => Unit) => f(cb)
+    def async[A](f: (A => Unit) => Unit): Par[A] = _ => (cb: A => Unit) => f(cb)
 
     /**
      * Helper function, for evaluating an action asynchronously, using the given `ExecutorService`.
