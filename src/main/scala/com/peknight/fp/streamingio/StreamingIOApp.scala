@@ -33,8 +33,4 @@ object StreamingIOApp extends App {
   val p = Process.liftOne((x: Int) => x * 2)
   val xs = p(LazyList(1, 2, 3)).toList
   println(xs)
-
-  val x: Process[Int, Int] = Halt().repeat
-  println(x)
-
 }
