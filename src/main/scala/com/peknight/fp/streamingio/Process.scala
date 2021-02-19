@@ -176,7 +176,7 @@ object Process {
       cur match {
         case Halt() => acc
         case Await(recv) =>
-          val next = if (ss.hasNext) recv(Some(ss.next)) else recv(None)
+          val next = if (ss.hasNext) recv(Some(ss.next())) else recv(None)
           go(ss, next, acc)
         case Emit(h, t) => go(ss, t, g(acc, h))
       }

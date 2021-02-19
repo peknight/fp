@@ -173,8 +173,8 @@ object Process {
     eval(acquire) flatMap { r => use(r).onComplete(release(r)) }
 
   def lines(filename: String): Process[IO, String] = resource { IO(io.Source.fromFile(filename)) } { src =>
-    lazy val iter = src.getLines // a stateful iterator
-    def step = if (iter.hasNext) Some(iter.next) else None
+    lazy val iter = src.getLines() // a stateful iterator
+    def step = if (iter.hasNext) Some(iter.next()) else None
     lazy val lines: Process[IO, String] = eval(IO(step)).flatMap {
       case None => Halt(End)
       case Some(line) => Emit(line, lines)

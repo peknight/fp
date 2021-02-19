@@ -47,7 +47,7 @@ object IO extends Monad[IO] {
   }
 
   import scala.io.StdIn.readLine
-  def ReadLine: IO[String] = IO { readLine }
+  def ReadLine: IO[String] = IO { readLine() }
   def PrintLine(msg: String): IO[Unit] = Suspend(() => Return(println(msg)))
 
   val echo = ReadLine.flatMap(PrintLine)
@@ -81,7 +81,7 @@ object IO extends Monad[IO] {
 
   val factorialREPL: IO[Unit] = sequence_(
     IO {println(helpstring)},
-    doWhile { IO { readLine } } { line =>
+    doWhile { IO { readLine() } } { line =>
       when (line != "q") { for {
         n <- factorial(line.toInt)
         _ <- IO { println("factorial: " + n)}

@@ -8,9 +8,9 @@ object StreamingIOApp extends App {
     val src = io.Source.fromFile(filename)
     try {
       var count = 0
-      val lines: Iterator[String] = src.getLines
+      val lines: Iterator[String] = src.getLines()
       while (count <= 40000 && lines.hasNext) {
-        lines.next
+        lines.next()
         count += 1
       }
       count > 40000
@@ -19,7 +19,7 @@ object StreamingIOApp extends App {
 
   def lines(filename: String): IO[LazyList[String]] = IO {
     val src = io.Source.fromFile(filename)
-    src.getLines.to(LazyList) lazyAppendedAll {src.close; LazyList.empty}
+    src.getLines().to(LazyList) lazyAppendedAll {src.close; LazyList.empty}
   }
 
 //  val lines: LazyList[String] = LazyList("a", "b", "c")
